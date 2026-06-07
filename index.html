@@ -918,16 +918,36 @@ function saveAlarm() {
 }
 
 // ─── RINGING ─────────────────────────────────────────
+let fadeInterval = null;
+
+function fadeInVolume() {
+  // Parte da 0 e sale fino a 1 in 60 secondi
+  audio.volume = 0;
+  document.getElementById('volumeSlider').value = 0;
+  const DURATION = 60000; // 60 secondi
+  const STEPS = 200;
+  const interval = DURATION / STEPS;
+  let step = 0;
+  fadeInterval = setInterval(() => {
+    step++;
+    const v = Math.min(step / STEPS, 1);
+    audio.volume = v;
+    document.getElementById('volumeSlider').value = v;
+    if (v >= 1) clearInterval(fadeInterval);
+  }, interval);
+}
+
 function triggerAlarm(alarm) {
   isRinging = true;
   currentRingingId = alarm.id;
   document.getElementById('ringingTime').textContent = alarm.time;
   document.getElementById('ringingOverlay').classList.add('show');
 
-  // Auto-set volume to 80% for alarm
-  audio.volume = 0.8;
-  document.getElementById('volumeSlider').value = 0.8;
+  // Parte con volume 0 e fa fade-in
+  audio.volume = 0;
   startRadio();
+  // Avvia il fade dopo che la radio è partita
+  audio.addEventListener('playing', fadeInVolume, { once: true });
 
   // If one-time alarm, deactivate after ringing
   if (alarm.days.length === 0) {
@@ -939,6 +959,7 @@ function triggerAlarm(alarm) {
 function stopAlarm() {
   isRinging = false;
   currentRingingId = null;
+  if (fadeInterval) { clearInterval(fadeInterval); fadeInterval = null; }
   document.getElementById('ringingOverlay').classList.remove('show');
   stopRadio();
   renderAlarms();
